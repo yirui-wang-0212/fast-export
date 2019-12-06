@@ -185,14 +185,14 @@ def generate_git_lfs_pointer(filename):
       buf = bfile.read(lfs_pointer_buffer_size)
   digest = hasher.hexdigest()
   try:
-    os.makedirs("lfs/objects/%s/%s" % (digest[0:2],digest[2:4]))
+    os.makedirs(".git/lfs/objects/%s/%s" % (digest[0:2],digest[2:4]))
   except:
     pass
   # Once we find where to put the large file, we need to copy it to the
   # cached location so the git lfs filter replaces the file pointer with
   # large file. If upload is required, it also needs to be in the git
   # cache location.
-  shutil.copy2(filename, "lfs/objects/%s/%s/%s" % (digest[0:2],digest[2:4],digest))
+  shutil.copy2(filename, ".git/lfs/objects/%s/%s/%s" % (digest[0:2],digest[2:4],digest))
   return """version https://git-lfs.github.com/spec/v1
 oid sha256:%s
 size %d
@@ -217,6 +217,7 @@ def export_file_contents(ctx,manifest,files,hgtags,encoding='',filter_contents=N
       filename = filename[5:]
       sys.stderr.write("Detected large file named %s\n" % (filename))
       #should detect where the large files are located
+      d=ctx.filectx(file).data()
       lfsFileCached = lfutil.findfile(ctx.repo(), d.strip('\n'))
       if lfsFileCached is not None:
         d = generate_git_lfs_pointer(lfsFileCached)
@@ -228,9 +229,9 @@ def export_file_contents(ctx,manifest,files,hgtags,encoding='',filter_contents=N
         sys.stderr.write("Please clone with --all-largefiles\n")
         sys.stderr.write("or pull with --lfrev %s\n" % (str(ctx.rev())))
         sys.exit(3) # closing in the middle of import will revert everything to the last checkpoint
-
-    file_ctx=ctx.filectx(file)
-    d=file_ctx.data()
+    else:
+      file_ctx=ctx.filectx(file)
+      d=file_ctx.data()
     if filter_contents:
       import subprocess
       filter_cmd=filter_contents + [filename,node.hex(file_ctx.filenode()),'1' if file_ctx.isbinary() else '0']
